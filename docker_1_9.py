@@ -82,29 +82,46 @@ class docker_1_9(ShutItModule):
 		shutit.send('curl https://get.docker.com/builds/Linux/x86_64/docker-latest > /usr/bin/docker')
 		shutit.send('chmod +x /usr/bin/docker')
 		shutit.send('nohup docker daemon &')
+
+		# Volumes
 		shutit.send('VID=$(docker volume create --name mydata)',note='Create a volume called "mydata" and store its id')
 		shutit.send('docker volume ls',note='List the volumes')
 		# TODO: Flocker? https://docs.clusterhq.com/en/1.5.0/install/docker-plugin.html
 		# http://docs.docker.com/engine/extend/plugins_volume/
-		shutit.send('docker network create --subnet 192.168.1.0/4 bob',note='Create a network in the specified subnet called "bob"')
-		shutit.send('docker network ls',note='List networks available')
-		shutit.send('docker run -d --name c1 debian sleep infinity',note='Start a container')
-		shutit.send('docker inspect c1',note='''Inspect this container's network section''')
-		shutit.send('docker network connect bob c1',note='Connect the container just-created ')
-		shutit.send('docker inspect c1',note='See how bob is now connected to this container, and it has been allocated an IP address in the subnet we specified.')
-		shutit.login(command='docker exec -ti c1 bash',note='See how bob is now connected to this container, and it has been allocated an IP address in the subnet we specified.')
-		shutit.send('apt-get upgrade && apt-get install net-tools',note='Install net tools')
+
+		# Network creation
+		shutit.send('docker network create --subnet 192.168.1.0/4 mysmallsubnet',note='Create a network in the specified subnet called "mysmallsubnet"')
+		shutit.send('docker network ls',note='List networks now available')
+		shutit.send('docker run -d --name container1 debian sleep infinity',note='Start a container')
+		shutit.send('docker inspect container1',note='''Inspect this container's network section. Observe it has only one IP address''')
+		shutit.send('docker network connect mysmallsubnet container1',note='Connect the container just-created ')
+		shutit.send('docker inspect container1',note='See how mysmallsubnet is now connected to this container, and it has been allocated an IP address in the subnet we specified.')
+		shutit.login(command='docker exec -ti container1 bash',note='Observe that mysmallsubnet is now connected to this container, and it has been allocated an IP address in the subnet we specified.')
+		shutit.send('apt-get update && apt-get install net-tools')
 		shutit.send('ifconfig',note='Observer that this container now has another eth interface with the relevant address')
 		shutit.logout()
+
+		# Dockerfile build time args
 		shutit.send_file('/tmp/Dockerfile','''FROM debian
 ARG string
-RUN echo $string > /bakedstr''',note='create a simple image with a build-time arg')
+RUN echo $string > /bakedstr''',note='create a simple Dockerfile with a build-time arg')
 		shutit.send('cd /tmp')
 		shutit.send('docker build -t image1 --build-arg=string="I am image 1" .',note='Build image 1 with a build-time argument from a Dockerfile')
 		shutit.send('docker build -t image2 --build-arg=string="I am image 2" .',note='Build image 2 with a different build-time argument from the same Dockerfile')
-		shutit.send('docker run image1 cat /tmp/bakedstr" .',note='Show baked-in string on image 1')
-		shutit.send('docker run image2 cat /tmp/bakedstr" .',note='Show baked-in string on image 2')
-		shutit.pause_point('')
+		shutit.send('docker run image1 cat /bakedstr',note='Show baked-in string on image 1')
+		shutit.send('docker run image2 cat /bakedstr',note='Show baked-in string on image 2')
+		shutit.send('docker history image1',note='Show history of image 1')
+		shutit.send('docker history image2',note='Show history of image 2')
+
+		# Privileged flag on exec
+		shutit.login(command='docker exec -ti container1 bash',note='Log back into container1')
+		shutit.send('apt-get install -y strace')
+		shutit.send('strace -p $$',note='Try to strace this bash process (it will fail, as we do not have sufficient privileges')
+		shutit.logout(note='log out of container')
+		shutit.login(command='docker exec --privileged -ti container1 bash',note='Log back into container1 with privileged flag set this time')
+		shutit.send('strace -p $$',note='Try to strace this bash process again, and it will succeed',expect='attached')
+		shutit.send('\x03',note='Quit the strace, as it is waiting for input',check_exit=False)
+		shutit.logout(note='log out')
 		shutit.logout()
 		return True
 
