@@ -10,4 +10,4 @@ cd shutit-docker-1_9
 ./run.sh
 ```
 
-[![asciicast](https://asciinema.org/a/7qdrtjx2wjdd0v7t3vs45g05o)](https://asciinema.org/a/7qdrtjx2wjdd0v7t3vs45g05o)
+[![asciicast](https://asciinema.org/a/7qdrtjx2wjdd0v7t3vs45g05o.png)](https://asciinema.org/a/7qdrtjx2wjdd0v7t3vs45g05o)
