@@ -82,6 +82,7 @@ class docker_1_9(ShutItModule):
 		shutit.send('curl https://get.docker.com/builds/Linux/x86_64/docker-latest > /usr/bin/docker')
 		shutit.send('chmod +x /usr/bin/docker')
 		shutit.send('nohup docker daemon &')
+		shutit.pause_point('nohup docker daemon &')
 
 		# Volumes
 		shutit.send('VID=$(docker volume create --name mydata)',note='Create a volume called "mydata" and store its id')
